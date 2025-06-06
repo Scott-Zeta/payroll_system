@@ -1,84 +1,121 @@
-function renderPaySlip(name, startOfWeek, endOfWeek, parsedShiftData, summary, weeklyTotal) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Payslip");
-  
-  // Clean the all content from row 2 to last row
+function renderPaySlip(
+  name,
+  startOfWeek,
+  endOfWeek,
+  parsedShiftData,
+  summary,
+  weeklyTotal
+) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Payslip');
+
+  // Clear content after header (Row 1)
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
-  if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
-  }
+  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
 
-  // Payslip Header rows
-  sheet.getRange(2,1).setValue("Weekly Payslip");
-  sheet.getRange(3,1).setValue(`Name: ${name}`);
-  sheet.getRange(4,1).setValue(`Week: ${formatDate(startOfWeek)} to ${formatDate(endOfWeek)}`)
+  // --- Payslip Header ---
+  sheet.getRange(2, 1).setValue('Weekly Payslip');
+  sheet.getRange(3, 1).setValue(`Name: ${name}`);
+  sheet
+    .getRange(4, 1)
+    .setValue(`Week: ${formatDate(startOfWeek)} to ${formatDate(endOfWeek)}`);
 
-  // Shift log Header rows
-  sheet.getRange(6,1).setValue("Shift Logs")
-  headers = ["Date", "Day", "Start","End","Break", "Total", "Regular Hours", "Early Overtime", "Late Overtime"]
-  CONFIG.OT_DAILY_TIME_THRESHOLD.forEach(
-    (value) => headers.push(`Daily OT${value}`)
-  );
-  CONFIG.OT_WEEKLY_TIME_THRESHOLD.forEach(
-    (value) => headers.push(`Weekly OT${value}`)
-  );
-  sheet.getRange(7,1,1,headers.length).setValues([headers]);
+  // --- Table Headers ---
+  const baseHeaders = ['Date', 'Day', 'Start', 'End', 'Break', 'Total'];
+  const allWageTypes = collectAllWageTypes(parsedShiftData, summary);
+  const headers = baseHeaders.concat(allWageTypes);
+  sheet.getRange(6, 1).setValue('Shift Logs');
+  sheet.getRange(7, 1, 1, headers.length).setValues([headers]);
 
-  const dayPrefix = { 6: "SAT", 0: "SUN" };
-  const dayArr = ["Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat"];
+  // --- Render Shift Logs ---
   let rowIndex = 8;
-  parsedShiftData.forEach((value,key) => 
-    value.forEach((record) =>{
-      const row = [formatDate(record.date), dayArr[`${record.date.getDay()}`],formatTime(record.start),formatTime(record.finish), record.break, getDurationHours(record.start, record.finish) - record.break];
-      
-      const parsedShift = record.parsedShift
-      // Non-OT hours
-      const prefix = dayPrefix[`${record.date.getDay()}`] || "WD";
-      const nonOTHoursArr = [parsedShift[`${prefix}_Regular`]?.hours || "", parsedShift[`${prefix}_Early_OT`]?.hours || "", parsedShift[`${prefix}_Late_OT`]?.hours || ""];
-      row.push(...nonOTHoursArr);
-      // Daily OT hours
-      const OTHoursArr = [];
-      CONFIG.OT_DAILY_TIME_THRESHOLD.forEach(
-        (value) => {
-          const hours = parsedShift[`Daily_OT_${value}`]?.hours || "";
-          OTHoursArr.push(hours)
-        }
-      )
-      CONFIG.OT_WEEKLY_TIME_THRESHOLD.forEach(
-        (value) => {
-          const hours = parsedShift[`Weekly_OT_${value}`]?.hours || "";
-          OTHoursArr.push(hours)
-        }
-      )
-      row.push(...OTHoursArr);
-      // Render the shift log
-      Logger.log(row)
-      sheet.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
+  parsedShiftData.forEach((records, key) => {
+    records.forEach((record) => {
+      const row = [
+        formatDate(record.date),
+        getDayName(record.date),
+        formatTime(record.start),
+        formatTime(record.finish),
+        record.break,
+        getDurationHours(record.start, record.finish) - record.break,
+      ];
+
+      // Fill wage categories dynamically
+      allWageTypes.forEach((type) => {
+        const entry = record.parsedShift?.[type];
+        row.push(
+          entry
+            ? roundToTwo(entry.hours) === 0
+              ? ''
+              : roundToTwo(entry.hours)
+            : ''
+        );
+      });
+
+      sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
       rowIndex++;
-    }));
-
-    //Render Summary rows
-    rowIndex++;
-    sheet.getRange(rowIndex, 1).setValue("Summary")
-    rowIndex++;
-    // Render the Summary in wage's order
-    const sortedSummaryKey = Object.keys(summary).sort((a,b) => summary[a].wage - summary[b].wage);
-    sortedSummaryKey.forEach((key) => {
-      if (roundToTwo(summary[key].total) !== 0) {
-        row = [`${key}: ${roundToTwo(summary[key].hours)} hours`, `at ${roundToTwo(summary[key].wage)} dollars`, `$ ${roundToTwo(summary[key].total)}`];
-        sheet.getRange(rowIndex,1,1,row.length).setValues([row]);
-        rowIndex++;
-      }
     });
+  });
 
-    const totalRow = ["Total","",`$ ${roundToTwo(weeklyTotal.total)}`];
-    sheet.getRange(rowIndex,1,1,totalRow.length).setValues([totalRow]);
+  // --- Summary Block ---
+  rowIndex += 2;
+  sheet.getRange(rowIndex, 1).setValue('Summary');
+  rowIndex++;
+
+  const sortedKeys = Object.keys(summary).sort(
+    (a, b) => summary[a].wage - summary[b].wage
+  );
+  sortedKeys.forEach((key) => {
+    const item = summary[key];
+    if (roundToTwo(item.total) > 0) {
+      const line = [
+        `${key}: ${roundToTwo(item.hours)} hours`,
+        `at $${roundToTwo(item.wage)}`,
+        `$${roundToTwo(item.total)}`,
+      ];
+      sheet.getRange(rowIndex, 1, 1, line.length).setValues([line]);
+      rowIndex++;
+    }
+  });
+
+  // --- Total Pay ---
+  sheet
+    .getRange(rowIndex, 1, 1, 3)
+    .setValues([['Total', '', `$${roundToTwo(weeklyTotal.total)}`]]);
+}
+
+function collectAllWageTypes(parsedShiftData, summary) {
+  const typesSet = new Set();
+
+  parsedShiftData.forEach((records) => {
+    records.forEach((record) => {
+      if (!record.parsedShift) return;
+      Object.keys(record.parsedShift).forEach((key) => {
+        if (record.parsedShift[key]?.hours > 0) typesSet.add(key);
+      });
+    });
+  });
+
+  const typesArray = Array.from(typesSet);
+
+  // Sort by actual wage value from summary
+  typesArray.sort((a, b) => {
+    const wageA = summary[a]?.wage ?? 0;
+    const wageB = summary[b]?.wage ?? 0;
+    return wageA - wageB;
+  });
+
+  return typesArray;
+}
+
+function getDayName(date) {
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
 }
 
 function formatDate(date) {
-  return Utilities.formatDate(date, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd/MM/yyyy');
 }
 
 function formatTime(date) {
-  return Utilities.formatDate(date, Session.getScriptTimeZone(), "h:mm a");
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'h:mm a');
 }
