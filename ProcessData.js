@@ -97,62 +97,85 @@ function parseRegularWork(date, shiftStart, remainHours, breakHours) {
   */
   const duration = remainHours + breakHours;
   const shiftStartDecimal = timeToDecimal(shiftStart);
-  const shiftEndDecimal = shiftStartDecimal + duration;
+  const shiftEndDecimal = (shiftStartDecimal + duration) % 24;
   const openDecimal = timeToDecimal(CONFIG.OPEN_TIME);
   const closeDecimal =
     timeToDecimal(CONFIG.CLOSE_TIME) === 0
       ? 24
       : timeToDecimal(CONFIG.CLOSE_TIME);
+  // Split the regular time into blocks by day(if the shift crosses midnight)
+  const timeBlocks = splitRegularTimeByDay(
+    date,
+    shiftStartDecimal,
+    shiftEndDecimal
+  );
+  const allWorkSegments = [];
 
-  // Seperate Early overtime, Late overtime, Work in opening hours
-  const earlyOvertimeHours = Math.max(openDecimal - shiftStartDecimal, 0);
-  const lateOvertimeHours = Math.max(shiftEndDecimal - closeDecimal, 0);
-  const workInOpeningHours = duration - earlyOvertimeHours - lateOvertimeHours;
+  timeBlocks.forEach((block) => {
+    // Seperate Early overtime, Late overtime, Work in opening hours
+    const blockDuration = block.end - block.start;
 
-  const day_key = date.getDay() == 0 ? 7 : date.getDay();
-  const dayPrefix = { 6: 'SAT', 7: 'SUN' };
-  const prefix = dayPrefix[day_key] || 'WD';
+    const earlyOT =
+      Math.max(openDecimal - block.start, 0) -
+      Math.max(openDecimal - block.end, 0);
+    const lateOT =
+      Math.max(block.end - closeDecimal, 0) -
+      Math.max(block.start - closeDecimal, 0);
+    const workInOpening = blockDuration - earlyOT - lateOT;
 
-  const regularWorkArray = [
-    {
-      wage: CONFIG[`${prefix}_BASE_WAGE`],
-      hours: workInOpeningHours,
-      name: `${prefix}_Regular`,
-    },
-    {
-      wage: CONFIG[`${prefix}_EARLY_OT_WAGE`],
-      hours: earlyOvertimeHours,
-      name: `${prefix}_Early_OT`,
-    },
-    {
-      wage: CONFIG[`${prefix}_LATE_OT_WAGE`],
-      hours: lateOvertimeHours,
-      name: `${prefix}_Late_OT`,
-    },
-  ];
+    const dayKey = block.date.getDay() === 0 ? 7 : block.date.getDay();
+    const prefixMap = { 6: 'SAT', 7: 'SUN' };
+    const prefix = prefixMap[dayKey] || 'WD';
+
+    if (workInOpening > 0) {
+      allWorkSegments.push({
+        name: `${prefix}_Regular`,
+        wage: CONFIG[`${prefix}_BASE_WAGE`],
+        hours: workInOpening,
+      });
+    }
+    if (earlyOT > 0) {
+      allWorkSegments.push({
+        name: `${prefix}_Early_OT`,
+        wage: CONFIG[`${prefix}_EARLY_OT_WAGE`],
+        hours: earlyOT,
+      });
+    }
+    if (lateOT > 0) {
+      allWorkSegments.push({
+        name: `${prefix}_Late_OT`,
+        wage: CONFIG[`${prefix}_LATE_OT_WAGE`],
+        hours: lateOT,
+      });
+    }
+  });
 
   // Sort by the wage, deduct break time from lowest wage periods first
-  regularWorkArray.sort((a, b) => a.wage - b.wage);
-  let breakRemain = breakHours;
-  for (let i = 0; i < regularWorkArray.length; i++) {
-    const diff = regularWorkArray[i].hours - breakRemain;
-    regularWorkArray[i].hours = Math.max(diff, 0);
-    breakRemain = -diff;
-    if (breakRemain < 0) break;
+  allWorkSegments.sort((a, b) => a.wage - b.wage);
+  let reamainingBreak = breakHours;
+
+  for (let segment of allWorkSegments) {
+    if (reamainingBreak <= 0) break;
+    const diff = segment.hours - reamainingBreak;
+    segment.hours = Math.max(diff, 0);
+    reamainingBreak = -diff;
   }
 
-  // Convert array into object and calculate total for further usage
-  const regularWorkResult = {};
-  regularWorkArray.forEach(
-    (element) =>
-      (regularWorkResult[`${element.name}`] = {
-        wage: element.wage,
-        hours: element.hours,
-        total: element.wage * element.hours,
-      })
-  );
+  // Assemble result in object format
+  const result = {};
+  for (const segment of allWorkSegments) {
+    if (!result[segment.name]) {
+      result[segment.name] = {
+        wage: segment.wage,
+        hours: 0,
+        total: 0,
+      };
+    }
+    result[segment.name].hours += segment.hours;
+    result[segment.name].total += segment.hours * segment.wage;
+  }
 
-  return regularWorkResult;
+  return result;
 }
 
 function parseOvertime(
