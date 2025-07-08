@@ -50,11 +50,12 @@ function parseShift(groupedShiftMap) {
         );
       parseResult = { ...parseResult, ...weeklyOTResult };
       // If there is time remain, parse for if there is daily overtime
+      Logger.log("Key: "+ key +"Time Remain after parsing weeklyOT: "+ weeklyRemain)
       if (weeklyRemain > 0) {
         const { hoursRemain: dailyRemain, overtimeResult: dailyOTResult } =
           parseOvertime(
             'Daily',
-            dailyTotal,
+            weeklyRemain,
             weeklyRemain,
             CONFIG.OT_DAILY_TIME_THRESHOLD,
             CONFIG.OT_DAILY_THRESHOLD_WAGE
@@ -188,7 +189,7 @@ function parseOvertime(
   const splitArray = new Array(thresholds.length + 1).fill(0);
   let start = totalHours - duration;
   let remaining = duration;
-
+  Logger.log(remaining);
   for (let i = 0; i <= thresholds.length; i++) {
     const end = thresholds[i] ?? Infinity;
 
@@ -215,6 +216,7 @@ function parseOvertime(
       total: overtimeArray[index] * thresholds_wage[index],
     };
   });
+  Logger.log("Hours Remain for next stage: " + hoursRemain)
   return { hoursRemain, overtimeResult };
 }
 
