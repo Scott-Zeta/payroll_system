@@ -12,16 +12,15 @@ function main() {
   Logger.log(TIME_CONFIG);
   Logger.log(WAGE_CONFIG);
 
-  const data = getValidatedShiftData()
+  const data = getValidatedShiftData();
+  Logger.log(data);
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Payslip");
   const inputName = sheet.getRange("A1").getValue();
   const inputDate = sheet.getRange("B1").getValue();
   const {startOfWeek, endOfWeek} = getWeekRange(inputDate)
-  const filterData = data.filter(row => 
-    row.name === inputName &&
-    row.date >= startOfWeek &&
-    row.date <= endOfWeek);
+
+  const filterData = query(data,inputName,inputDate);
 
   const groupedShiftMap = sortAndGroupByDate(filterData);
   const summary = parseShift(groupedShiftMap);
