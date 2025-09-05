@@ -1,7 +1,0 @@
-{
-  "timeZone": "Australia/Adelaide",
-  "dependencies": {
-  },
-  "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8"
-}
