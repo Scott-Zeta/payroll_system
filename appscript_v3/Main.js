@@ -1,10 +1,16 @@
 let CONFIG;
+let TIME_CONFIG;
+let WAGE_CONFIG;
 
 function main() {
   // Load Global Config
-  CONFIG = getConfig();
+  CONFIG = getConfig("Config");
+  TIME_CONFIG = getConfig("Time Config");
+  WAGE_CONFIG = getConfig("Wage Config");
   if(!CONFIG) Logger.log("Get Config failed");
   Logger.log(CONFIG);
+  Logger.log(TIME_CONFIG);
+  Logger.log(WAGE_CONFIG);
 
   const data = getValidatedShiftData()
 
