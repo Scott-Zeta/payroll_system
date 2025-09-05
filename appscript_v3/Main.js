@@ -14,6 +14,8 @@ function main() {
 
   const data = getValidatedShiftData();
   Logger.log(data);
+  const groupedData = groupByName(data);
+  Logger.log(groupedData);
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Payslip");
   const inputName = sheet.getRange("A1").getValue();
@@ -21,6 +23,7 @@ function main() {
   const {startOfWeek, endOfWeek} = getWeekRange(inputDate)
 
   const filterData = query(data,inputName,inputDate);
+  Logger.log(filterData)
 
   const groupedShiftMap = sortAndGroupByDate(filterData);
   const summary = parseShift(groupedShiftMap);

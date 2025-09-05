@@ -1,3 +1,17 @@
+function groupByName(data) {
+  const groupedData = data.reduce((acc,item) => {
+    if(item.name){
+      const key = item.name;
+      if(!acc[key]){
+        acc[key] = [];
+      }
+      acc[key].push(item);
+    }
+    return acc;
+  },{})
+  return groupedData
+}
+
 function sortAndGroupByDate(data) {
   // Sort the record by Date, then by Start Time
   data.sort((a, b) => {
