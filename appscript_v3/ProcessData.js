@@ -59,8 +59,8 @@ function parseShift(groupedShiftMap) {
           'Weekly',
           weeklyTotal,
           duration,
-          CONFIG.OT_WEEKLY_TIME_THRESHOLD,
-          CONFIG.OT_WEEKLY_THRESHOLD_WAGE
+          TIME_CONFIG.OT_WEEKLY_TIME_THRESHOLD,
+          WAGE_CONFIG.OT_WEEKLY_THRESHOLD_WAGE
         );
       parseResult = { ...parseResult, ...weeklyOTResult };
       // If there is time remain, parse for if there is daily overtime
@@ -73,8 +73,8 @@ function parseShift(groupedShiftMap) {
             'Daily',
             weeklyRemain,
             weeklyRemain,
-            CONFIG.OT_DAILY_TIME_THRESHOLD,
-            CONFIG.OT_DAILY_THRESHOLD_WAGE
+            TIME_CONFIG.OT_DAILY_TIME_THRESHOLD,
+            WAGE_CONFIG.OT_DAILY_THRESHOLD_WAGE
           );
         parseResult = { ...parseResult, ...dailyOTResult };
 
@@ -115,11 +115,11 @@ function parseRegularWork(date, shiftStart, remainHours, breakHours) {
   const duration = remainHours + breakHours;
   const shiftStartDecimal = timeToDecimal(shiftStart);
   const shiftEndDecimal = (shiftStartDecimal + duration) % 24;
-  const openDecimal = timeToDecimal(CONFIG.OPEN_TIME);
+  const openDecimal = timeToDecimal(TIME_CONFIG.OPEN_TIME);
   const closeDecimal =
-    timeToDecimal(CONFIG.CLOSE_TIME) === 0
+    timeToDecimal(TIME_CONFIG.CLOSE_TIME) === 0
       ? 24
-      : timeToDecimal(CONFIG.CLOSE_TIME);
+      : timeToDecimal(TIME_CONFIG.CLOSE_TIME);
   // Split the regular time into blocks by day(if the shift crosses midnight)
   const timeBlocks = splitRegularTimeByDay(
     date,
@@ -147,21 +147,21 @@ function parseRegularWork(date, shiftStart, remainHours, breakHours) {
     if (workInOpening > 0) {
       allWorkSegments.push({
         name: `${prefix}_Regular`,
-        wage: CONFIG[`${prefix}_BASE_WAGE`],
+        wage: WAGE_CONFIG[`${prefix}_BASE_WAGE`],
         hours: workInOpening,
       });
     }
     if (earlyOT > 0) {
       allWorkSegments.push({
         name: `${prefix}_Early_OT`,
-        wage: CONFIG[`${prefix}_EARLY_OT_WAGE`],
+        wage: WAGE_CONFIG[`${prefix}_EARLY_OT_WAGE`],
         hours: earlyOT,
       });
     }
     if (lateOT > 0) {
       allWorkSegments.push({
         name: `${prefix}_Late_OT`,
-        wage: CONFIG[`${prefix}_LATE_OT_WAGE`],
+        wage: WAGE_CONFIG[`${prefix}_LATE_OT_WAGE`],
         hours: lateOT,
       });
     }
