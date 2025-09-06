@@ -2,6 +2,27 @@ function renderPaySlipList(summaryList) {
   const sheet =
     SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Payslip List');
   cleanContent(sheet);
+
+  rc = createRowCursor(2);
+  const { startOfWeek, endOfWeek } = getWeekRange(
+    SpreadsheetApp.getActiveSpreadsheet()
+      .getSheetByName('Shift Entry')
+      .getRange('A2')
+      .getValue()
+  );
+
+  for (const [key, value] of Object.entries(summaryList)) {
+    renderPaySlip(
+      key,
+      startOfWeek,
+      endOfWeek,
+      value.shiftLog,
+      value.summary,
+      value.weeklyTotal,
+      sheet,
+      rc
+    );
+  }
 }
 
 function renderPaySlip(
@@ -10,14 +31,10 @@ function renderPaySlip(
   endOfWeek,
   parsedShiftData,
   summary,
-  weeklyTotal
+  weeklyTotal,
+  sheet,
+  rc = createRowCursor(2)
 ) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Payslip');
-
-  cleanContent(sheet);
-
-  const rc = createRowCursor(2);
-
   // --- Payslip Header ---
   writeRow(sheet, rc, ['Weekly Payslip']);
   writeRow(sheet, rc, [
@@ -63,7 +80,7 @@ function renderPaySlip(
       writeRow(sheet, rc, row);
     });
   });
-  rc.skip(2);
+  rc.skip(1);
 
   // --- Summary Block ---
   writeRow(sheet, rc, ['Summary']);
@@ -85,7 +102,13 @@ function renderPaySlip(
   });
 
   // --- Total Pay ---
-  writeRow(sheet, rc, ['Total', '', `$${roundToTwo(weeklyTotal.total)}`]);
+  writeRow(sheet, rc, [
+    'Total',
+    `${roundToTwo(weeklyTotal.hours)} hours`,
+    '',
+    `$${roundToTwo(weeklyTotal.total)}`,
+  ]);
+  rc.skip(2);
 }
 
 function collectAllWageTypes(parsedShiftData, summary) {
