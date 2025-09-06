@@ -36,10 +36,12 @@ function renderPaySlip(
   rc = createRowCursor(2)
 ) {
   // --- Payslip Header ---
-  writeRow(sheet, rc, ['Weekly Payslip']);
+  const titleRow = rc.peek();
+  writeRow(sheet, rc, ['Weekly Payslip'], 3);
+  const metaRow = rc.peek();
   writeRow(sheet, rc, [
-    `Name: ${name}`,
-    ``,
+    `Name:`,
+    `${name}`,
     `Week:`,
     `${formatDate(startOfWeek)} to ${formatDate(endOfWeek)}`,
   ]);
@@ -50,7 +52,9 @@ function renderPaySlip(
   const allWageTypes = collectAllWageTypes(parsedShiftData, summary);
   const headers = baseHeaders.concat(allWageTypes);
 
+  const shiftLogTitleRow = rc.peek();
   writeRow(sheet, rc, ['Shift Logs']);
+  const headerRow = rc.peek();
   writeRow(sheet, rc, headers);
 
   // --- Render Shift Logs ---
@@ -83,6 +87,7 @@ function renderPaySlip(
   rc.skip(1);
 
   // --- Summary Block ---
+  const summaryTitleRow = rc.peek();
   writeRow(sheet, rc, ['Summary']);
 
   const sortedKeys = Object.keys(summary).sort(
@@ -116,9 +121,18 @@ function renderPaySlip(
     `$${roundToTwo(weeklyTotal.total)}`,
   ]);
   */
-
+  const totalRow = rc.peek();
   writeRow(sheet, rc, ['Total', `${roundToTwo(weeklyTotal.hours)} hours`]);
   rc.skip(2);
+
+  // --- Format ---
+  boldRow(sheet, titleRow, 3);
+  boldRow(sheet, metaRow, 4);
+  boldRow(sheet, shiftLogTitleRow, 1);
+  boldRow(sheet, headerRow, 6 + allWageTypes.length);
+  boldRow(sheet, summaryTitleRow, 1);
+  boldRow(sheet, totalRow, 4);
+  border(sheet, titleRow, 1, totalRow, 6 + allWageTypes.length);
 }
 
 function collectAllWageTypes(parsedShiftData, summary) {
@@ -150,7 +164,7 @@ function cleanContent(sheet) {
   // Clear content after header (Row 1)
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
-  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, lastCol).clear();
 }
 
 /* Cursor function for tracking the row index */
@@ -201,4 +215,27 @@ function formatDate(date) {
 
 function formatTime(date) {
   return Utilities.formatDate(date, Session.getScriptTimeZone(), 'h:mm a');
+}
+
+/*
+Format Helper Functions
+*/
+function boldRow(sheet, row, cols = 12) {
+  sheet.getRange(row, 1, 1, cols).setFontWeight('bold');
+}
+
+function border(sheet, r1, c1 = 1, r2, c2 = 12) {
+  const rng = sheet.getRange(r1, c1, r2 - r1 + 1, c2 - c1 + 1);
+  // outer frame
+  rng.setBorder(
+    true,
+    null,
+    true,
+    null,
+    null,
+    null,
+    null,
+    SpreadsheetApp.BorderStyle.SOLID_MEDIUM
+  );
+  return rng;
 }
