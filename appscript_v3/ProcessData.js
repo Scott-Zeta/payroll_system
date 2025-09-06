@@ -1,15 +1,15 @@
 function groupByName(data) {
-  const groupedData = data.reduce((acc,item) => {
-    if(item.name){
+  const groupedData = data.reduce((acc, item) => {
+    if (item.name) {
       const key = item.name;
-      if(!acc[key]){
+      if (!acc[key]) {
         acc[key] = [];
       }
       acc[key].push(item);
     }
     return acc;
-  },{})
-  return groupedData
+  }, {});
+  return groupedData;
 }
 
 function sortAndGroupByDate(data) {
@@ -64,7 +64,9 @@ function parseShift(groupedShiftMap) {
         );
       parseResult = { ...parseResult, ...weeklyOTResult };
       // If there is time remain, parse for if there is daily overtime
-      Logger.log("Key: "+ key +"Time Remain after parsing weeklyOT: "+ weeklyRemain)
+      Logger.log(
+        'Key: ' + key + 'Time Remain after parsing weeklyOT: ' + weeklyRemain
+      );
       if (weeklyRemain > 0) {
         const { hoursRemain: dailyRemain, overtimeResult: dailyOTResult } =
           parseOvertime(
@@ -230,7 +232,7 @@ function parseOvertime(
       total: overtimeArray[index] * thresholds_wage[index],
     };
   });
-  Logger.log("Hours Remain for next stage: " + hoursRemain)
+  Logger.log('Hours Remain for next stage: ' + hoursRemain);
   return { hoursRemain, overtimeResult };
 }
 

@@ -1,5 +1,6 @@
-function renderPaySlipList (summaryList){
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Payslip List');
+function renderPaySlipList(summaryList) {
+  const sheet =
+    SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Payslip List');
   cleanContent(sheet);
 }
 
@@ -13,24 +14,29 @@ function renderPaySlip(
 ) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Payslip');
 
-  cleanContent(sheet)
+  cleanContent(sheet);
+
+  const rc = createRowCursor(2);
 
   // --- Payslip Header ---
-  sheet.getRange(2, 1).setValue('Weekly Payslip');
-  sheet.getRange(3, 1).setValue(`Name: ${name}`);
-  sheet
-    .getRange(4, 1)
-    .setValue(`Week: ${formatDate(startOfWeek)} to ${formatDate(endOfWeek)}`);
+  writeRow(sheet, rc, ['Weekly Payslip']);
+  writeRow(sheet, rc, [
+    `Name: ${name}`,
+    ``,
+    `Week:`,
+    `${formatDate(startOfWeek)} to ${formatDate(endOfWeek)}`,
+  ]);
+  rc.skip(1);
 
   // --- Table Headers ---
   const baseHeaders = ['Date', 'Day', 'Start', 'End', 'Break', 'Total'];
   const allWageTypes = collectAllWageTypes(parsedShiftData, summary);
   const headers = baseHeaders.concat(allWageTypes);
-  sheet.getRange(6, 1).setValue('Shift Logs');
-  sheet.getRange(7, 1, 1, headers.length).setValues([headers]);
+
+  writeRow(sheet, rc, ['Shift Logs']);
+  writeRow(sheet, rc, headers);
 
   // --- Render Shift Logs ---
-  let rowIndex = 8;
   parsedShiftData.forEach((records, key) => {
     records.forEach((record) => {
       const row = [
@@ -54,15 +60,13 @@ function renderPaySlip(
         );
       });
 
-      sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
-      rowIndex++;
+      writeRow(sheet, rc, row);
     });
   });
+  rc.skip(2);
 
   // --- Summary Block ---
-  rowIndex += 2;
-  sheet.getRange(rowIndex, 1).setValue('Summary');
-  rowIndex++;
+  writeRow(sheet, rc, ['Summary']);
 
   const sortedKeys = Object.keys(summary).sort(
     (a, b) => summary[a].wage - summary[b].wage
@@ -70,20 +74,18 @@ function renderPaySlip(
   sortedKeys.forEach((key) => {
     const item = summary[key];
     if (roundToTwo(item.total) > 0) {
-      const line = [
-        `${key}: ${roundToTwo(item.hours)} hours`,
+      const row = [
+        `${key}:`,
+        `${roundToTwo(item.hours)} hours`,
         `at $${roundToTwo(item.wage)}`,
         `$${roundToTwo(item.total)}`,
       ];
-      sheet.getRange(rowIndex, 1, 1, line.length).setValues([line]);
-      rowIndex++;
+      writeRow(sheet, rc, row);
     }
   });
 
   // --- Total Pay ---
-  sheet
-    .getRange(rowIndex, 1, 1, 3)
-    .setValues([['Total', '', `$${roundToTwo(weeklyTotal.total)}`]]);
+  writeRow(sheet, rc, ['Total', '', `$${roundToTwo(weeklyTotal.total)}`]);
 }
 
 function collectAllWageTypes(parsedShiftData, summary) {
@@ -110,11 +112,50 @@ function collectAllWageTypes(parsedShiftData, summary) {
   return typesArray;
 }
 
-function cleanContent (sheet){
+/* Helper function */
+function cleanContent(sheet) {
   // Clear content after header (Row 1)
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
   if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+}
+
+/* Cursor function for tracking the row index */
+function createRowCursor(start = 2) {
+  let row = start;
+  return {
+    peek: () => row, // read current row (no move)
+    next: (n = 1) => {
+      // return current row, then advance
+      const r = row;
+      row += n;
+      return r;
+    },
+    skip: (n = 1) => {
+      row += n;
+    }, // move down n rows
+    set: (r) => {
+      row = r;
+    }, // jump to a specific row
+  };
+}
+
+/**
+ * Helper to write a single row (1D array).
+ */
+function writeRow(sheet, rc, values, col = 1) {
+  sheet.getRange(rc.next(), col, 1, values.length).setValues([values]);
+}
+
+/**
+ * Helper to write a block (2D array). Returns rows written.
+ */
+function writeBlock(sheet, startRow, startCol, rows2D) {
+  if (!rows2D || !rows2D.length) return 0;
+  sheet
+    .getRange(startRow, startCol, rows2D.length, rows2D[0].length)
+    .setValues(rows2D);
+  return rows2D.length;
 }
 
 function getDayName(date) {
