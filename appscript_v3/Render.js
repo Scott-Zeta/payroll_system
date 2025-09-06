@@ -91,23 +91,33 @@ function renderPaySlip(
   sortedKeys.forEach((key) => {
     const item = summary[key];
     if (roundToTwo(item.total) > 0) {
+      /*
+      // Hide the wage calculation since client doesn't need the feature 
       const row = [
         `${key}:`,
         `${roundToTwo(item.hours)} hours`,
         `at $${roundToTwo(item.wage)}`,
         `$${roundToTwo(item.total)}`,
       ];
+      */
+
+      const row = [`${key}:`, `${roundToTwo(item.hours)} hours`];
       writeRow(sheet, rc, row);
     }
   });
 
   // --- Total Pay ---
+  /*
+  // Hide the wage calculation since slient doesn't need the feature
   writeRow(sheet, rc, [
     'Total',
     `${roundToTwo(weeklyTotal.hours)} hours`,
     '',
     `$${roundToTwo(weeklyTotal.total)}`,
   ]);
+  */
+
+  writeRow(sheet, rc, ['Total', `${roundToTwo(weeklyTotal.hours)} hours`]);
   rc.skip(2);
 }
 
