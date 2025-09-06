@@ -144,6 +144,18 @@ function parseRegularWork(date, shiftStart, remainHours, breakHours) {
     const prefixMap = { 6: 'SAT', 7: 'SUN' };
     const prefix = prefixMap[dayKey] || 'WD';
 
+    /* As new requirements, no need to split working hours in weekends into Early_OT/Late_OT/Regular */
+    const isWeekend = dayKey === 6 || dayKey === 7;
+    if (isWeekend) {
+      allWorkSegments.push({
+        name: `${prefix}_Regular`,
+        wage: WAGE_CONFIG[`${prefix}_BASE_WAGE`],
+        hours: blockDuration,
+      });
+      return;
+    }
+    /* Remove this section if you want to split weekends again */
+
     if (workInOpening > 0) {
       allWorkSegments.push({
         name: `${prefix}_Regular`,
