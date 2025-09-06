@@ -47,4 +47,6 @@ function main() {
   Logger.log(JSON.stringify(summaryList, null, 2));
 
   renderPaySlipList(summaryList);
+
+  switchToSheet('Payslip List');
 }

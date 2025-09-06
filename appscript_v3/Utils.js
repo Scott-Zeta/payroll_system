@@ -22,3 +22,13 @@ function logOutMap(mapInput) {
     }
   });
 }
+
+function switchToSheet(sheetName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(sheetName);
+  if (sheet) {
+    ss.setActiveSheet(sheet);
+  } else {
+    throw new Error(`Sheet "${sheetName}" not found`);
+  }
+}
