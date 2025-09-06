@@ -1,3 +1,8 @@
+function renderPaySlipList (summaryList){
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Payslip List');
+  cleanContent(sheet);
+}
+
 function renderPaySlip(
   name,
   startOfWeek,
@@ -8,10 +13,7 @@ function renderPaySlip(
 ) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Payslip');
 
-  // Clear content after header (Row 1)
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+  cleanContent(sheet)
 
   // --- Payslip Header ---
   sheet.getRange(2, 1).setValue('Weekly Payslip');
@@ -106,6 +108,13 @@ function collectAllWageTypes(parsedShiftData, summary) {
   });
 
   return typesArray;
+}
+
+function cleanContent (sheet){
+  // Clear content after header (Row 1)
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
 }
 
 function getDayName(date) {
