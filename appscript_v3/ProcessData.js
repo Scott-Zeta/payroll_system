@@ -146,7 +146,7 @@ function parseRegularWork(date, shiftStart, remainHours, breakHours) {
 
     /* As new requirements, no need to split working hours in weekends into Early_OT/Late_OT/Regular */
     const isWeekend = dayKey === 6 || dayKey === 7;
-    if (isWeekend) {
+    if (isWeekend && TIME_CONFIG.BOOL_WEEKEND_OT === false) {
       allWorkSegments.push({
         name: `${prefix}_Regular`,
         wage: WAGE_CONFIG[`${prefix}_BASE_WAGE`],
@@ -154,7 +154,6 @@ function parseRegularWork(date, shiftStart, remainHours, breakHours) {
       });
       return;
     }
-    /* Remove this section if you want to split weekends again */
 
     if (workInOpening > 0) {
       allWorkSegments.push({

@@ -24,6 +24,10 @@ function getConfig(configSheetName) {
           if (isNaN(value) || value < 0) throw `Invalid threshold value`;
           config[header] = value;
           break;
+        case header.includes('BOOL'):
+          if (typeof value !== 'boolean') throw `Invalid boolean setting value`;
+          config[header] = value;
+          break;
       }
     } catch (e) {
       errors.push(`Error on column ${header}: ${e}`);
